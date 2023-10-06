@@ -1,7 +1,6 @@
 // Module information
 name = "loader"
 
-
 process loader1 {
     tag "${name}"
     cpus 1

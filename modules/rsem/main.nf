@@ -1,5 +1,5 @@
 // Module information
-name = ""
+name = "rsem"
 module = params[name]
 
 
@@ -92,7 +92,10 @@ process module {
     flags="!{module.flags}"
     tfile="time-!{id}-!{name}.txt"
     !{params.time.bin} !{params.time.flags} -o "${tfile}" \
-        !{bin} "${flags}"
+        !{bin} "${flags}" \
+        --star \
+        --paired-end \
+        --gzipped-read-file
 
     # Process information
     echo "	Allocated resources" >> "${tfile}"

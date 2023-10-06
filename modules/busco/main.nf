@@ -1,5 +1,5 @@
 // Module information
-name = ""
+name = "busco"
 module = params[name]
 
 
@@ -80,7 +80,7 @@ process module {
         saveAs: {"${name}-index-${id}-${it}"}
 
     input:
-    tuple val(id)
+    tuple val(id), path(genome), path(db), val(mode)
 
     output:
     tuple val(id)
@@ -92,7 +92,9 @@ process module {
     flags="!{module.flags}"
     tfile="time-!{id}-!{name}.txt"
     !{params.time.bin} !{params.time.flags} -o "${tfile}" \
-        !{bin} "${flags}"
+        !{bin} "${flags}" \
+        -i "!{genome}" -o . -l "!{db}" \
+        -m "!{mode}"
 
     # Process information
     echo "	Allocated resources" >> "${tfile}"
