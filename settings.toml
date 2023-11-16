@@ -36,9 +36,20 @@ common = "conf/common.toml"
 
 
 [workflow]
-# Set to false to use manually extracted reads
+# Enables meta.tsv to be used to map samples and annotations
 # Default: true
+use_meta = true
+
+# Set to true to use manually extracted reads
+# Default: false
 skip_extract = true
+
+# Set to true to use manually cleaned reads
+skip_qc_reads = true
+
+# Set to true to use manuall aligned reads
+# Default: true
+skip_align = true
 
 # Compress data
 # Default: true
@@ -48,13 +59,17 @@ compress = true
 # Nextflow configuration settings
 [nextflow]
 
+# Size of buffer for queues, recommended to leave the value as the default
+# Default: 8
+buffer = 8
+
 # Cleans old logs
 # Default: true
 clean_logs = true
 
 # Enables workflow to use cached processes
 # Default: true
-resume = true
+resume = false
 
 
 # Profile-specific paramters are defined in conf/{profileName}.toml, please

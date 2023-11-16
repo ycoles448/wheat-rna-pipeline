@@ -1,13 +1,15 @@
 # Configuration of Nextflow processes
 [process]
 module = [
-    "openjdk/17.0.0_35.lua",
-    "singularity/3.8.6-mpi.lua",
+    "openjdk/17.0.5_8",
+    "singularity/3.11.4-nompi",
+    "parallel/20220522",
     "samtools/1.15--h3843a85_0",
-    "trinity/2.13.2--ha140323_0.lua",
-    "interproscan/5.56-89.0.lua"
+    "trinity/2.13.2--hea94271_3",
+    "interproscan/5.56-89.0"
 ]
 executor = "slurm"
+queue = "work"
 queueSize = 4
 # clusterOptions = "--qos high"
 
@@ -23,6 +25,7 @@ flags = ""
 
 # Container engine parameters
 [container]
+
 # Container engine binary
 # Default: ./
 bin = "singularity"
@@ -42,13 +45,13 @@ exec_opts = ""
 # Enable the usage of a single container for the pipeline, see entry below to
 # set path to the container.
 # Default: true
-monolithic = false
+monolithic = true
 
 # Path to a container containing all binaries and tools used for the pipeline,
 # only functional if monolithic is set to true, otherwise containers are loaded
 # per-module.
 # Default: NA
-path = "${projectDir}/containers/comboseq.sif"
+path = "${projectDir}/../containers/biology.sif"
 
 
 # Module settings
@@ -59,45 +62,30 @@ wc = "wc"
 
 [extract]
 # Resources
-process = "local"
 cores = 8
 memory = 8
+buffer = 8 # Set to a value greater than 1 to enable process buffering
 
 # Container options, corrects mismatched reads on alignment
 container = false
+direct = false
 
 # Command
 bin = "pigz"
 flags = ""
 
 
-[samtools]
+[fastp]
 # Resources
 cores = 4
-memory = 8
+memory = -1
+buffer = 8
+time = 1
 
 # Container options
 container = true
 direct = false
 path = ""
-
-# Command
-bin = "fastp"
-flags = ""
-
-
-[fastp]
-# Resources
-# Buffer is used for combining combining samples when using a batch allocator,
-# currently not implemented
-cores = 4
-memory = -1
-buffer = 4
-
-# Container options
-container = false
-direct = false
-path = "${projectDir}/containers/comboseq.sif"
 
 # Command
 bin = "fastp"
@@ -154,13 +142,14 @@ flags = ""
 [trinity]
 # Resources
 cores = 16 # ~1/4 of a node
-memory = 60 # ~1/4 of a node
+memory = 200 # ~1/4 of a node
 time = 24
+buffer = 1
 queue = "work"
 
 # Container options
 container = false
-path = "${projectDir}/containers/trinity.sif"
+path = "${projectDir}/containers/biology.sif"
 
 # Command
 bin = "Trinity"
@@ -210,6 +199,24 @@ path = "${projectDir}/containers/comboseq.sif"
 
 # Command
 bin = "multiqc"
+flags = ""
+
+
+[samtools]
+# Resources
+cores = 8
+memory = 10
+time = 1
+buffer = 1
+
+# Container options
+container = true
+direct = false
+path = "${projectDir}/containers/biology.sif"
+
+# Command
+bin = "samtools"
+bin_merge = "merge"
 flags = ""
 
 

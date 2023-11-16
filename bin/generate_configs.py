@@ -2,6 +2,7 @@
 
 """
 Generate Nextflow configurations from TOML files.
+DEPRECATED.
 """
 
 import sys
@@ -12,11 +13,13 @@ except ImportError:
 
 args = sys.argv
 
+
 def load_toml(file):
     with open(file, "r") as f:
         return toml.load(f)
         print("Closed TOML file")
         f.close()
+
 
 def nf_conf_str(x, conf):
     string = "\n"

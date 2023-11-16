@@ -1,0 +1,10 @@
+.nextflow
+.nextflow.log*
+
+meta.tsv
+
+bin/nextflow
+bin/yj
+conf/generated
+modules/*_old
+work/

@@ -4,28 +4,36 @@
 # Location of data, either relative to the "workflow.nf" script, as an
 # absolute path, or prefixed with ${projectDir}
 [data]
-path = "${projectDir}/data"
-out = "${projectDir}/data"
+
+# Paths
+species = "wheat"
+meta = "${projectDir}/meta.tsv"
+path = "${projectDir}/../data"
+out = "${projectDir}/../data"
 bin = "${projectDir}/bin"
-reports = "${projectDir}/reports"
+reports = "${projectDir}/../reports"
 logs = "${projectDir}/logs"
 
 # Reads
-# reads = "reads" # Path in data folder
-# reads = "reads-small"
-reads = "reads-limited"
-reads_unzipped = "reads-unzipped"
+reads = "reads"
+reads_unzipped = "reads-extracted"
 reads_trimmed = "reads-trimmed"
-reads_length = "150" # Length of reads
+reads_length = 150 # Length of reads
 
-glob = "*R{1,2}*.fastq.gz"
-glob_unzipped = "*R{1,2}*.fastq"
+glob = "*_r{1,2}*.fastq.gz"
+glob_unzipped = "*_r{1,2}*.fastq"
+glob_trimmed = "trim_*_r{1,2}*.fastq"
+
+# Alignments
+bam = "bam"
+bam_star_sorted = "Aligned.sortedByCoord.out.bam"
 
 # Genomes
 # Expects files with the base name "genome" (i.e. genome.fasta, genome.gtf)
 genomes = "genomes" # Path in data folder
-fungi = "ptr-m4"
-plant = "wheat-cs"
+genes = "genes"
+fungi = "ptr"
+plant = "wheat"
 
 # Genome information: fungi
 fungi_intron_max = 6000
@@ -48,10 +56,19 @@ tablemaker = "tablemaker"
 trinity = "trinity"
 
 
-# Module settings
-[fastp]
-# Sequence quality cutoff
-# Default: 20
+# Metadata information, enable "use_meta" in "settings.toml" to enable
+[meta]
+
+# List of factors in selecting files
+factors = ["cultivar", "control", "time"]
+
+# Factor used to group individual samples
+group = "cultivar"
+
+
+[qc]
+
+# Quality cutoff (PHRED score)
 quality = 20
 
 # Number of bases to trim from the front
@@ -60,11 +77,11 @@ trimf = 10
 
 # Number of bases to trim from the tail
 # Default: 0
-trimt = 0
+trimt = 5
 
 # Autodetection of adapter sequences
 # Default: false
-autodetect = false
+autodetect = true
 
 # Compression of reads, only effective if compression is enabled in
 # settings.toml
@@ -74,4 +91,3 @@ compress = true
 # Compression level
 # Default: 5
 compress_level = 5
-

@@ -16,13 +16,17 @@ NF_OPTS=""
 
 # Python settings
 # Set to a Python virtual environment, or comment out to disable
-PYENV="containers/pipeline"
+PYENV="../containers/pipeline"
 PY="python3"
+
+# YJ binary, needed to convert between data file formats
+YJ="./bin/yj"
 
 # Enable auto-generation of Nextflow configs
 AUTOGEN="True"
 CONF_GEN="bin/generate_configs.py"
 CONF_GET="bin/toml_parser.py"
+
 
 # *** DO NOT EDIT BELOW THIS LINE ***
 
@@ -66,11 +70,17 @@ function autogen() {
 	# Profile generation
 	# Set active profile
 	PROFILE=$(settings_get "$_PROFILE")
+	COMMON=$(settings_get "$_COMMON")
 
 	# Generate configuration files from templates
 	mkdir -p "$(dirname "$CONFIG")"
 	mkdir -p "$(dirname "$PARAMS")"
+
+	# TODO: Replace config generation with yj
 	"$PY" "$CONF_GEN" "$CONF_DIR/$PROFILE.toml"
+
+	rm -rf "${PARAMS}"
+	cat "${COMMON}" "${CONF_DIR}/${PROFILE}.toml" "${SETTINGS}" | "${YJ}" -tyk >> "${PARAMS}"
 }
 
 # Settings
@@ -79,6 +89,7 @@ SETTINGS="settings.toml"
 
 # Settings strings
 _PROFILE="profile.active"
+_COMMON="files.common"
 _CONF="files.conf"
 _CONFIG="files.config"
 _PARAMS="files.params"
