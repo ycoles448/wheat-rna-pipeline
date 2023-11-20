@@ -39,7 +39,7 @@ log.info """
 include { EXTRACT } from "./modules/extract"
 include { FASTP } from "./modules/fastp"
 include { MERGE_BAMS } from "./modules/samtools"
-include { TRINITY_S1 } from "./modules/trinity"
+include { TRINITY_S1 } from "./modules/trinity_testing"
 
 
 // Channels
@@ -199,7 +199,7 @@ workflow TRANSCRIPTOME {
             // Split metadata by factor
             for (level = 0; level < group_factors.size(); level++) {
                 ids[level] = [] as ArrayList<String>
-                meta[level] = [] as ArrayList<Map<String, String>>
+                meta[level] = [] as Set<Map<String, String>>
                 files[level] = [] as Set<String>
 
                 for (i = 0; i < bams.size(); i++) {
@@ -214,7 +214,7 @@ workflow TRANSCRIPTOME {
                 for (i = 0; i < it.size(); i++) {
                     if (it[i][1][group] == group_factors[level]) {
                         ids[level].add(it[i][0])
-                        meta[level].add(it[i][1])
+                        meta[level].add(["cultivar": it[i][1]["cultivar"]])
                         files[level].add(files_bams[level])
                     }
                 }
@@ -226,12 +226,12 @@ workflow TRANSCRIPTOME {
             files: files
         }
 
+    // Buffer all inputs into single job (stage 1 is poorly multi-threaded)
     TRINITY_S1(
-        PREASM_GROUPED.ids.flatMap().last(),
-        PREASM_GROUPED.meta.flatMap().last(),
-        PREASM_GROUPED.files.flatMap().last()
-    )[0]
-        .view()
+        PREASM_GROUPED.ids.flatMap().collect({[it]}),
+        PREASM_GROUPED.meta.flatMap().collect({[it]}),
+        PREASM_GROUPED.files.flatten().collect()
+    )[0].view()
 }
 
 // workflow MAIN {
@@ -243,7 +243,6 @@ workflow TRANSCRIPTOME {
 //         EXTRACT(reads_pe)
 //         EXTRACT = EXTRACT.out.reads
 //     }
-
 //     // Buffer testing
 //     // EXTRACT = EXTRACT
 //     //     .combine(adapters)
