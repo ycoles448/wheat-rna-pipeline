@@ -11,6 +11,7 @@ reads = "${params.data.path}/${params.data.reads}/${params.data.glob}"
 reads_unzipped = "${params.data.path}/${params.data.reads_unzipped}/${params.data.glob_unzipped}"
 reads_trimmed = "${params.data.path}/${params.data.reads_trimmed}/${params.data.glob_trimmed}"
 reads_bam = "${params.data.path}/${params.data.star}/*_${params.data.species}/*_${params.data.bam_star_sorted}"
+reads_bam_grouped = "${params.data.path}/${params.data.bam}/${species}_*"
 genomes = "${params.data.path}/${params.data.genomes}"
 adapters = "${params.data.path}/${params.data.adapters}"
 
@@ -28,6 +29,8 @@ log.info """
 > reads                     ${reads}
 > reads (extracted)         ${reads_unzipped}
 > reads (trimmed)           ${reads_trimmed}
+> bam (star)                ${reads_bam}
+> bam (grouped)             ${reads_bam_grouped}
 > meta                      ${meta_f}
 """
 
@@ -36,8 +39,7 @@ log.info """
 include { EXTRACT } from "./modules/extract"
 include { FASTP } from "./modules/fastp"
 include { MERGE_BAMS } from "./modules/samtools"
-include { TRINITY } from "./modules/trinity"
-// include { STAR } from "./modules/star"
+include { TRINITY_S1 } from "./modules/trinity"
 
 
 // Channels
@@ -63,13 +65,13 @@ if (params.workflow.skip_align) {
             return tuple(id, it)
         }
 }
+if (params.workflow.skip_bam_merge) {
+    reads_bam_grouped = Channel.fromPath(reads_bam_grouped)
+}
 
 adapters = Channel.fromPath(adapters)
 meta = Channel.fromPath(meta_f)
 
-
-workflow MAIN {
-}
 
 workflow QC_READS {
     main:
@@ -169,27 +171,67 @@ workflow TRANSCRIPTOME {
             files: files
         }
 
-    READS_GROUPED.ids
-        .buffer {size: 8}
+    if (params.workflow.skip_bam_merge) {
+        BAMS_GROUPED = reads_bam_grouped.collect()
+    } else {
+        BAMS_GROUPED = MERGE_BAMS(
+            READS_GROUPED.ids.flatMap(),
+            READS_GROUPED.meta.flatMap(),
+            READS_GROUPED.files.flatMap()
+        )["bams"].collect()
+    }
+
+    PREASM_GROUPED = READS_GROUPED.all.map { [it] }
+        .concat(BAMS_GROUPED.map { [it] })
+        .collect()
+        .multiMap { it, bams ->
+            def Set<String> group_factors = []
+            def ArrayList<ArrayList<String>> ids = []
+            def ArrayList<ArrayList<Map<String, String>>> meta = []
+            def ArrayList<ArrayList<String>> files = []
+            def ArrayList<String> files_bams = [:]
+
+            // Collect factor levels
+            for (i = 0; i < it.size(); i++) {
+                group_factors.add(it[i][1][group])
+            }
+
+            // Split metadata by factor
+            for (level = 0; level < group_factors.size(); level++) {
+                ids[level] = [] as ArrayList<String>
+                meta[level] = [] as ArrayList<Map<String, String>>
+                files[level] = [] as Set<String>
+
+                for (i = 0; i < bams.size(); i++) {
+                    bams_name = new File(bams[i].toString()).getName()
+                        .replaceFirst("${species}_", "")
+                        .replaceFirst("[.]bam", "")
+                    if (bams_name.toString() == group_factors[level].toString()) {
+                        files_bams[level] = bams[i]
+                    }
+                }
+
+                for (i = 0; i < it.size(); i++) {
+                    if (it[i][1][group] == group_factors[level]) {
+                        ids[level].add(it[i][0])
+                        meta[level].add(it[i][1])
+                        files[level].add(files_bams[level])
+                    }
+                }
+            }
+
+            all: it
+            ids: ids
+            meta: meta
+            files: files
+        }
+
+    TRINITY_S1(
+        PREASM_GROUPED.ids.flatMap().last(),
+        PREASM_GROUPED.meta.flatMap().last(),
+        PREASM_GROUPED.files.flatMap().last()
+    )[0]
         .view()
-
-    READS_GROUPED.meta
-        .buffer {size: 8, remainder: true}
-        .view()
-
-    BAMS = MERGE_BAMS(
-        READS_GROUPED.ids.flatMap().last(),
-        READS_GROUPED.meta.flatMap().last(),
-        READS_GROUPED.files.flatMap().last()
-    )
-
-    BAMS[0].view()
-
-    // TRINITY(
-    //     READS_GROUPED.ids.flatMap(),
-    //     READS_GROUPED.meta.flatMap(),
-    //     READS_GROUPED.files.flatMap()
-    // )
 }
 
 // workflow MAIN {

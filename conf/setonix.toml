@@ -1,13 +1,11 @@
 # Configuration of Nextflow processes
 [process]
 module = [
-    "openjdk/17.0.5_8",
     "singularity/3.11.4-nompi",
+    "openjdk/17.0.5_8",
     "parallel/20220522",
-    "samtools/1.15--h3843a85_0",
-    "trinity/2.13.2--hea94271_3",
-    "interproscan/5.56-89.0"
 ]
+beforeScript = "source ${projectDir}/templates/mamba.sh"
 executor = "slurm"
 queue = "work"
 queueSize = 4
@@ -20,6 +18,10 @@ flags = "-v"
 
 [parallel]
 bin = "parallel"
+flags = ""
+
+[xargs]
+bin = "xargs"
 flags = ""
 
 
@@ -141,14 +143,14 @@ flags = ""
 
 [trinity]
 # Resources
-cores = 16 # ~1/4 of a node
-memory = 200 # ~1/4 of a node
-time = 24
-buffer = 1
-queue = "work"
+cores_s1 = 16
+memory_s1 = 50
+time_s1 = 24
+queue_s1 = "work"
 
 # Container options
 container = false
+direct = false
 path = "${projectDir}/containers/biology.sif"
 
 # Command
@@ -204,13 +206,13 @@ flags = ""
 
 [samtools]
 # Resources
-cores = 8
-memory = 10
-time = 1
-buffer = 1
+cores = 16
+memory = 20
+time = 6
+buffer = 2
 
 # Container options
-container = true
+container = false
 direct = false
 path = "${projectDir}/containers/biology.sif"
 

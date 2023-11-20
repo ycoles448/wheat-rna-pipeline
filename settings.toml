@@ -47,9 +47,12 @@ skip_extract = true
 # Set to true to use manually cleaned reads
 skip_qc_reads = true
 
-# Set to true to use manuall aligned reads
+# Set to true to use manually aligned reads
 # Default: true
 skip_align = true
+
+# Set to true to use manually merged BAM files
+skip_bam_merge = true
 
 # Compress data
 # Default: true

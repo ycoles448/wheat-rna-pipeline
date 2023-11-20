@@ -23,24 +23,37 @@ if (module.container == true) {
 }
 
 // Set resources
-threads = module.cores.toInteger()
-if (params.hardware.smt == true) {
+buffer = 1
+if (module.cores != null) {
+    // Allocate cores and threads normally
     cores = module.cores
     if (module.buffer > 1) {
-        cores = (params.nextflow.buffer * 2).toInteger()
+        buffer = module.buffer
+        cores = Math.floor(cores * buffer).toInteger()
     }
 
-    threads = (module.cores.toInteger() * 2).toInteger()
+    // Allocate with SMT enabled
+    threads = cores
+    if (params.hardware.smt) {
+        threads = Math.floor(2).toInteger()
+    }
 }
 
-memory = module.memory
-if (module.memory < 0) {
-    memory = 1 + Math.floor(threads * 0.25)
+
+if (module.memory != null) {
+    memory = module.memory
+
+    if (module.memory < 0) {
+        memory = 1 + Math.floor(threads * 0.25)
+    }
 }
 
-time = 1
-if (!module.time) {
-    println("Set non-existent time value to ${time}h for module ${name}")
+if (module.time != null) {
+    time = module.time
+    if (module.time == null) {
+        time = 1
+        println("Set non-existent time value to ${time}h for module ${name}")
+    }
 }
 
 executor = params.process.executor
@@ -51,9 +64,4 @@ if (module.executor != null) {
 queue = params.process.queue
 if (module.queue != null) {
     queue = module.queue
-}
-
-buffer = 1
-if (module.buffer != null) {
-    buffer = module.buffer.toInteger()
 }

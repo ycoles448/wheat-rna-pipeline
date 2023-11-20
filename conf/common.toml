@@ -35,13 +35,6 @@ genes = "genes"
 fungi = "ptr"
 plant = "wheat"
 
-# Genome information: fungi
-fungi_intron_max = 6000
-
-# Genome information: plant
-# Longest intron length, based on GTF annotations
-plant_intron_max = 30000
-
 # Proteins
 proteins = "proteins"
 
@@ -54,6 +47,14 @@ fastqc = "fastqc"
 star = "star"
 tablemaker = "tablemaker"
 trinity = "trinity"
+
+
+[wheat]
+max_intron_length = 30000
+
+
+[ptr]
+max_intron_length = 6000
 
 
 # Metadata information, enable "use_meta" in "settings.toml" to enable
