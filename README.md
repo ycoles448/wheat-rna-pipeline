@@ -1,4 +1,4 @@
 ## Wheat RNA-seq pipeline
 # Dependencies
 - Nextflow
-- yj
+- yj (required to translate TOML to conf files for Nextflow)

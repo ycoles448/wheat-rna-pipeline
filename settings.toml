@@ -4,7 +4,19 @@
 
 
 [hardware]
+# Enable SMT
 smt = true
+
+# Enable running the pipeline using SLURM
+slurm = true
+
+
+# SLURM parameters
+[slurm]
+partition = "work"
+time = "24:00:00"
+cpus = "8"
+memory = "10G"
 
 
 [files]
@@ -47,12 +59,23 @@ skip_extract = true
 # Set to true to use manually cleaned reads
 skip_qc_reads = true
 
+skip_gff_convert = true
+
+# Set to true to use manually calculated genome stats
+skip_genome_stats = true
+
+# Set to true to use manually generated STAR indexes
+skip_index = true
+
 # Set to true to use manually aligned reads
 # Default: true
-skip_align = true
+skip_align = false
 
 # Set to true to use manually merged BAM files
 skip_bam_merge = true
+
+# Set to tru to use manually normalised BAM files
+skip_asm_s1 = true
 
 # Compress data
 # Default: true

@@ -4,8 +4,9 @@ module = [
     "singularity/3.11.4-nompi",
     "openjdk/17.0.5_8",
     "parallel/20220522",
+    "trinity/2.13.2--hea94271_3",
 ]
-beforeScript = "source ${projectDir}/templates/mamba.sh"
+# beforeScript = "source ${projectDir}/templates/mamba.sh"
 executor = "slurm"
 queue = "work"
 queueSize = 4
@@ -78,49 +79,51 @@ flags = ""
 
 
 [fastp]
-# Resources
 cores = 4
 memory = -1
 buffer = 8
 time = 1
 
-# Container options
 container = true
 direct = false
-path = ""
+path = "${projectDir}/../containers/biology.sif"
 
-# Command
 bin = "fastp"
 flags = ""
 
 
+[gffread]
+cores = 8
+memory = 10
+buffer = 1
+time = 1
+
+container = true
+direct = false
+path = "${projectDir}/../containers/biology.sif"
+
+bin = "gffread"
+flags = ""
+
+
 [star]
-# Resources
-# Memory allocation should be set to -1 to use the STAR module's automatic
-# memory assignment
-cores = 16
-
-# TODO: Determine aligner peak memory usage
-memory_align = 200
-
-# Peaked at ~160 GB for a wheat genome
-# Allocated +20% of peak memory usage
-# ~1000 GB of memory available on highmem queues
-memory_index = 200
+cores_align = 64
+cores_index = 8
+memory_align = 100
+memory_index = 100
+buffer = 8
+buffer_align = 8
+buffer_index = 1
+time_align = 24
+time_index = 6
 
 queue_align = "work"
 queue_index = "work"
 
-# TODO: Determine aligner time
-time_align = 4
-# Took 1.5 h to build the Chinese Spring reference, using 64 cores and 200 GB of RAM
-time_index = 4
-
-# Container options
 container = true
-path = "${projectDir}/containers/comboseq.sif"
+direct = false
+path = "${projectDir}/../containers/biology.sif"
 
-# Command
 bin = "STAR"
 flags = ""
 
@@ -134,7 +137,7 @@ queue = "work"
 
 # Container options
 container = false
-path = "${projectDir}/containers/comboseq.sif"
+path = "${projectDir}/../containers/biology.sif"
 
 # Command
 bin = "tablemaker"
@@ -143,15 +146,15 @@ flags = ""
 
 [trinity]
 # Resources
-cores_s1 = 16
-memory_s1 = 50
+cores_s1 = 32
+memory_s1 = 230
 time_s1 = 24
-queue_s1 = "work"
+queue_s1 = "highmem"
 
 # Container options
 container = false
 direct = false
-path = "${projectDir}/containers/biology.sif"
+path = "${projectDir}/../containers/biology.sif"
 
 # Command
 bin = "Trinity"
@@ -167,7 +170,7 @@ queue = "work"
 
 # Container options
 container = false
-path = "${projectDir}/containers/comboseq.sif"
+path = "${projectDir}/../containers/biology.sif"
 
 # Command
 bin = "interproscan.sh"
@@ -182,7 +185,7 @@ memory = -1
 # Container options
 container = false
 direct = false
-path = "${projectDir}/containers/comboseq.sif"
+path = "${projectDir}/../containers/biology.sif"
 
 # Command
 bin = "fastqc"
@@ -197,7 +200,7 @@ memory = 1
 # Container options
 container = true
 direct = false
-path = "${projectDir}/containers/comboseq.sif"
+path = "${projectDir}/../containers/biology.sif"
 
 # Command
 bin = "multiqc"
@@ -214,7 +217,7 @@ buffer = 2
 # Container options
 container = false
 direct = false
-path = "${projectDir}/containers/biology.sif"
+path = "${projectDir}/../containers/biology.sif"
 
 # Command
 bin = "samtools"
@@ -224,13 +227,15 @@ flags = ""
 
 [seqkit]
 # Resources
-cores = 1
+cores = 8
 memory = 1
+time = 1
+buffer = 1
 
 # Container options
 container = true
 direct = false
-path = "${projectDir}/containers/comboseq.sif"
+path = "${projectDir}/../containers/biology.sif"
 
 # Command
 bin = "seqkit"

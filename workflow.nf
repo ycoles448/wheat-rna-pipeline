@@ -3,20 +3,8 @@
 // Nextflow configuration
 nextflow.enable.dsl = 2
 
-
 // Variables
-species = "${params.data.species}"
-meta_f = "${params.data.meta}"
-reads = "${params.data.path}/${params.data.reads}/${params.data.glob}"
-reads_unzipped = "${params.data.path}/${params.data.reads_unzipped}/${params.data.glob_unzipped}"
-reads_trimmed = "${params.data.path}/${params.data.reads_trimmed}/${params.data.glob_trimmed}"
-reads_bam = "${params.data.path}/${params.data.star}/*_${params.data.species}/*_${params.data.bam_star_sorted}"
-reads_bam_grouped = "${params.data.path}/${params.data.bam}/${species}_*"
-genomes = "${params.data.path}/${params.data.genomes}"
-adapters = "${params.data.path}/${params.data.adapters}"
-
-factors = params.meta.factors
-group = params.meta.group
+run(new File("${projectDir}/src/vars.groovy"))
 
 
 // Logging
@@ -29,8 +17,11 @@ log.info """
 > reads                     ${reads}
 > reads (extracted)         ${reads_unzipped}
 > reads (trimmed)           ${reads_trimmed}
+> star index                ${star_index_f}
 > bam (star)                ${reads_bam}
 > bam (grouped)             ${reads_bam_grouped}
+> genome                    ${genome_f}
+> genome_length             ${genome_length_f}
 > meta                      ${meta_f}
 """
 
@@ -38,13 +29,18 @@ log.info """
 // Load modules
 include { EXTRACT } from "./modules/extract"
 include { FASTP } from "./modules/fastp"
+include { CONVERT_GFF } from "./modules/convert"
+include { SEQKIT_LENGTH } from "./modules/seqkit"
+include { STAR_ALIGN; STAR_INDEX } from "./modules/star"
 include { MERGE_BAMS } from "./modules/samtools"
-include { TRINITY_S1 } from "./modules/trinity_testing"
+include { TRINITY_S1 } from "./modules/trinity"
 
 
 // Channels
 // Reads
 reads_pe = Channel.fromFilePairs(reads)
+genome = Channel.fromPath(genome_f)
+genome_gff = Channel.fromPath(genome_gff_f)
 if (params.workflow.skip_extract) {
     reads_pe = Channel.fromFilePairs(reads_unzipped)
 }
@@ -54,6 +50,15 @@ if (params.workflow.skip_qc_reads) {
             it[0] = it[0].replaceFirst("trim_", "")
             return it
         }
+}
+if (params.workflow.skip_gff_convert) {
+    genome_gtf = Channel.fromPath(genome_gtf_f)
+}
+if (params.workflow.skip_genome_stats) {
+    genome_length = Channel.fromPath(genome_length_f)
+}
+if (params.workflow.skip_index) {
+    star_index = Channel.fromPath(star_index_f)
 }
 if (params.workflow.skip_align) {
     reads_bam = Channel.fromPath(reads_bam)
@@ -73,7 +78,17 @@ adapters = Channel.fromPath(adapters)
 meta = Channel.fromPath(meta_f)
 
 
+process GET_NODE_DETAILS {
+    executor "local"
+    output: stdout
+    shell: '''echo Node: $(sstat -j $SLURM_JOB_ID | awk 'NR==3 {print $3}')'''
+}
+
+
 workflow QC_READS {
+    take:
+    NODE_DETAILS
+
     main:
     READS = reads_pe
         // .map {id, reads -> [id.replaceFirst("^0+(?!\$)", ""), reads]}
@@ -119,16 +134,74 @@ workflow QC_READS {
     META = META
 }
 
+
 workflow TRANSCRIPTOME {
     take:
     READS
     META
 
     main:
-    if (params.workflow.skip_extract) {
+
+    GENOME = genome
+
+    if (params.data.is_gff && params.data.skip_gff_convert) {
+        GENOME_GTF = CONVERT_GFF(genome_gff).gtf
+    } else {
+        GENOME_GTF = genome_gtf
+    }
+    if (params.workflow.skip_genome_stats) {
+        GENOME_LENGTH = genome_length
+    } else {
+        GENOME_LENGTH = SEQKIT_LENGTH(genome).length
+    }
+
+    READS_BUF = META
+        .join(READS)
+        .buffer(size: params.star.buffer_align.toInteger(), remainder: true)
+        .multiMap {
+            def ArrayList ids = []
+            def ArrayList meta = []
+            def ArrayList files = []
+            for (i = 0; i < it.size(); i++) {
+                ids.add(it[i][0])
+                meta.add(it[i][1])
+                for (f = 0; f < it[i][2].size(); f++) files.add(it[i][2][f])
+            }
+
+            all: it
+            ids: ids
+            meta: meta
+            files: files
+        }
+
+    if (params.workflow.skip_index) {
+        INDEX = star_index
+    } else {
+        INDEX = STAR_INDEX(GENOME.combine(GENOME_GTF))
+        INDEX[0].view()
+        INDEX = INDEX.index
+    }
+
+    STAR_FILES = READS_BUF.files
+        .combine(GENOME_LENGTH)
+        .combine(GENOME_GTF)
+        .combine(INDEX)
+
+    READS = READS_BUF.all
+        .flatMap()
+        .map {
+            it.remove(1)
+            return it
+        }
+
+    if (params.workflow.skip_align) {
         READS_BAM = reads_bam
     } else {
-        // READS_BAM = STAR()
+        READS_BAM = STAR_ALIGN(
+            READS_BUF.ids.last(),
+            READS_BUF.meta.last(),
+            STAR_FILES.last()
+        ).bam
     }
 
     READS_GROUPED = META
@@ -139,7 +212,7 @@ workflow TRANSCRIPTOME {
             it.remove(it.size() - 1)
             return it
         }
-        .collect { [it] }
+        .collect {[it]}
         .multiMap {
             def Set<String> group_factors = []
             def ArrayList<ArrayList<String>> ids = []
@@ -227,11 +300,11 @@ workflow TRANSCRIPTOME {
         }
 
     // Buffer all inputs into single job (stage 1 is poorly multi-threaded)
-    TRINITY_S1(
-        PREASM_GROUPED.ids.flatMap().collect({[it]}),
-        PREASM_GROUPED.meta.flatMap().collect({[it]}),
-        PREASM_GROUPED.files.flatten().collect()
-    )[0].view()
+    // PREASM_NORM_GROUPED = TRINITY_S1(
+    //     PREASM_GROUPED.ids.flatMap(),
+    //     PREASM_GROUPED.meta.flatMap(),
+    //     PREASM_GROUPED.files.flatMap()
+    // )
 }
 
 // workflow MAIN {
@@ -326,7 +399,8 @@ workflow TRANSCRIPTOME {
 // }
 
 workflow {
-    QC_READS()
+    GET_NODE_DETAILS().view()
+    QC_READS(GET_NODE_DETAILS)
     TRANSCRIPTOME(QC_READS.out.READS, QC_READS.out.META)
     // FUNGI(MAIN.out.reads)
     // PLANT(MAIN.out.reads)

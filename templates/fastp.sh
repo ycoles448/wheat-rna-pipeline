@@ -1,13 +1,13 @@
 #!/usr/bin/env bash -l
 
 ids=$(echo !{ids} | tr -d '[,]')
-flags=("!{module.flags}")
+flags=(!{module.flags})
 flags+=(
-    "-w 2" # Two cores per file
+    -w 2 # Two cores per file
 )
 
 if [[ "!{module.autodetect}" == "True" ]]; then
-    flags+=" --detect_adapter_for_pe"
+    flags+=(--detect_adapter_for_pe)
 fi
 
 !{bin} ${flags[@]} \

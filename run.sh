@@ -13,6 +13,7 @@
 
 SCRIPT="workflow.nf"
 NF_OPTS=""
+MODE="$1"
 
 # Python settings
 # Set to a Python virtual environment, or comment out to disable
@@ -98,6 +99,7 @@ _RESUME="nextflow.resume"
 _PYENV="$PYENV/bin/activate"
 _NF="files.nf"
 _PY="files.py3"
+_SLURM="hardware.slurm"
 
 # Data types
 # Boolean string for true
@@ -157,4 +159,18 @@ echo """
 - Loading paramters file: $PARAMS
 """
 
-"$NF" -c "$CONFIG" run "$SCRIPT" -params-file "$PARAMS" $NF_OPTS
+if [[ $(settings_get "$_SLURM") == True ]]; then
+	WRAPPER=(srun -n 1)
+	if [[ $MODE == debug ]]; then
+		WRAPPER+=(-c 8)
+		WRAPPER+=(--mem 10G)
+		WRAPPER+=(--time 01:00:00)
+		WRAPPER+=(--partition debug)
+	else
+		WRAPPER+=(-c $(settings_get slurm.cpus))
+		WRAPPER+=(--mem $(settings_get slurm.memory))
+		WRAPPER+=(--time $(settings_get slurm.time))
+		WRAPPER+=(--partition $(settings_get slurm.partition))
+	fi
+fi
+"${WRAPPER[@]}" "$NF" -c "$CONFIG" run "$SCRIPT" -params-file "$PARAMS" $NF_OPTS

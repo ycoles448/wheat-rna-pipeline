@@ -1,29 +1,29 @@
 // Module information
-name = "seqkit"
+name = "gffread"
 module = params[name]
 
 run(new File("modules/template.groovy"))
 
-process SEQKIT_LENGTH {
-    tag "${name}-length"
-    cpus cores
-    memory "${Math.floor(memory * buffer)}G"
+process CONVERT_GFF {
+    // tag "${name}-convert"
+    // cpus cores
+    // memory "${Math.floor(memory * buffer)}G"
     // time "${time}hour"
     // executor executor
     executor "local"
-    // queue queue
+    queue queue
 
     publishDir "${params.data.out}/${params.data.genomes}/${params.data.species}",
         mode: "copy",
         overwrite: true,
-        pattern: "length.txt"
+        pattern: "genome.gtf"
 
     input:
-    tuple val(id), path(files)
+    path(files)
 
     output: stdout
-    tuple val(id), path("length.txt"), emit: "length"
+    path("genome.gtf"), emit: "gtf"
 
     shell:
-    template "seqkit_length.sh"
+    template "gffread_convert.sh"
 }

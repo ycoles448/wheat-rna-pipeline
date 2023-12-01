@@ -1,24 +1,18 @@
 #!/usr/bin/env bash -l
 
+# Fix number of threads per process, instead of !{threads_s1} per Nextflow definition
+threads=4
+
 ids=$(echo !{ids} | tr -d '[,]')
 files=$(echo !{files} | tr -d '[,]')
-flags=("!{module.flags}")
+flags=(!{module.flags})
 flags+=(
-    "--CPU !{threads_s1}"
-    "--max_memory !{module.memory_s1}G"
+    --CPU ${threads}
+    --max_memory !{module.memory_s1}G
 )
 
-echo "> IDS"
-echo "${ids}"
-
-echo "> META"
-echo "!{meta}"
-
-echo "> FILES"
-ls -l
-
-echo "> COMMAND"
-echo !{bin} ${flags[@]} \
-    --genome_guided_bam ${files} \
+!{params.parallel.bin} !{bin} ${flags[@]} \
+    --output {.}_trinity \
+    --genome_guided_bam {} \
     --genome_guided_max_intron !{params[params.data.species].max_intron_length} \
-    --no_run_inchworm
+    --no_run_inchworm ::: ${files}

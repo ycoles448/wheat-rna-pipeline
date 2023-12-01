@@ -1,8 +1,8 @@
 // Module information
 name = "samtools"
 module = params[name]
-template = "modules/template.groovy"
-run(new File(template))
+
+run(new File("modules/template.groovy"))
 
 process MERGE_BAMS {
     tag "${name}-${ids}"

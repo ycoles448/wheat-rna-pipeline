@@ -1,14 +1,14 @@
 // Module information
 name = "trinity"
 module = params[name]
-template = "./modules/template.groovy"
-run(new File(template))
+
+run(new File("modules/template.groovy"))
 
 threads_s1 = module.cores_s1
 if (params.hardware.smt) threads_s1 = Math.floor(module.cores_s1 * 2).toInteger()
 
 process TRINITY_S1 {
-    // tag "${name}-${ids}"
+    tag "${name}-${ids}"
     cpus module.cores_s1
     memory "${module.memory_s1}G"
     time "${module.time_s1}hour"
@@ -18,7 +18,7 @@ process TRINITY_S1 {
     publishDir "${params.data.out}/${params.data.trinity}",
         mode: "copy",
         overwrite: true,
-        pattern: null
+        pattern: "${params.data.species}_${meta[params.meta.group][0]}_trinity"
 
     input:
     val(ids)
@@ -28,7 +28,7 @@ process TRINITY_S1 {
     output: stdout
     val(ids), emit: "ids"
     val(meta), emit: "meta"
-    // path("trim_*_r{1,2}.fastq"), emit: "reads"
+    path("${params.data.species}_${meta[params.meta.group][0]}_trinity"), emit: "asm_s1"
 
     shell:
     template "trinity_s1.sh"

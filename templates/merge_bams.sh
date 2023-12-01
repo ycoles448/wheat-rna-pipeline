@@ -5,7 +5,7 @@ files=()
 for f in ${ids}; do
     files+=(${f}_!{params.data.bam_star_sorted})
 done
-flags=("!{module.flags}")
+flags=(!{module.flags})
 flags+=(
     # Number of threads
     # Fixed at 2 when buffering is enabled (default behaviour), samtools spawns n + 2 threads
