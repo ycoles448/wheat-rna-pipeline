@@ -114,10 +114,10 @@ memory_index = 100
 buffer = 8
 buffer_align = 8
 buffer_index = 1
-time_align = 24
+time_align = 48
 time_index = 6
 
-queue_align = "work"
+queue_align = "long"
 queue_index = "work"
 
 container = true
